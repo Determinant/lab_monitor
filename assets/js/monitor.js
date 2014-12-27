@@ -170,8 +170,6 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
                     "translate(" + margin.left + "," + margin.top + ")");
     var width = 500 - margin.left - margin.right;
     var height = 250 - margin.top - margin.bottom;
-    console.log(width);
-    console.log(height);
     // Set the ranges
     this.x = d3.scale.linear().range([0, width]);
     this.y = d3.scale.linear().range([height, 0]);
@@ -330,7 +328,6 @@ function update_jobs(resp, after) {
             this.handler = new graph_handler[d.metadata.type]();
             this.handler.setup(this, d, i, b);
         });
-    console.log(jobs.exit());
     jobs.exit()
         .style("height", function(d) { return d3.select(this).style("height"); })
         .transition().duration(750)
