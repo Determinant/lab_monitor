@@ -1,0 +1,25 @@
+path {
+    stroke-width: 2;
+    fill: none;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.job_graph {
+    overflow: hidden;
+}
+
+.listgraph {
+    margin-bottom: 0px;
+}
+
+.panel {
+    margin-left: auto;
+    margin-right: auto;
+}
