@@ -8,17 +8,18 @@ from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, url, StaticFileHandler
 from rwlock import RWLock
 
-logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] (%(threadName)-10s) %(message)s',)
-MAX_LENGTH = 2048
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
+MAX_LENGTH = 65536
 MAX_RECORDS = 32
 PORT = 2333
-lock = RWLock()
 local_socket_address = "./lab_monitor.socket"
-cmd_socket = None
+
+lock = RWLock()
 stat_res = {}
 is_exiting = threading.Event()
-id_cnt = 0
 reclaimed_ids = []
+id_cnt = 0
 
 class ActionError(Exception):
     pass
@@ -57,7 +58,7 @@ def check_id(mesg):
         raise ActionError("jid field not specified")
     if not stat_res.has_key(jid):
         raise ActionError("the jid does not exist")
-    logging.debug("jid: {0}".format(jid))
+    logging.info("jid: {0}".format(jid))
     return jid
 
 def add_record(mesg):
@@ -104,34 +105,34 @@ def command_server():
             continue
         length, = unpack("<i", received)
         if length <= 0 or length > MAX_LENGTH:
-            logging.debug("invalid header: {0}".format(length))
+            logging.warning("invalid header: {0}".format(length))
             conn.close() # invalid header
             continue
         try:#
             mesg = json.loads(conn.recv(length))
             if not isinstance(mesg, dict):
-                logging.debug("not a javascript object")
+                logging.warning("not a javascript object")
                 continue
             if not mesg.has_key("action"):
                 raise ActionError("action not specified")
-            logging.debug("action: {0}".format(mesg["action"]))
+            logging.info("action: {0}".format(mesg["action"]))
             try:
                 lock.acquire_write()
                 conn.send(action_map[mesg["action"]](mesg))
             finally:
                 lock.release()
         except ValueError:
-            logging.debug("malformed json string")
+            logging.warning("malformed json string")
         except ActionError as e:
-            logging.debug(e)
+            logging.warning(e)
         except KeyError as e:
-            logging.debug("action not found: {0}".format(mesg["action"]))
+            logging.warning("action not found: {0}".format(mesg["action"]))
         except SocketError as e:
-            logging.debug("socket error: {0}".format(e))
+            logging.warning("socket error: {0}".format(e))
         finally:
             conn.close()
 
-cmd = threading.Thread(target=command_server)
+cmd = threading.Thread(target=command_server, name="local")
 cmd.setDaemon(True)
 cmd.start()
 
@@ -144,14 +145,14 @@ def cmd_shutdown():
 class AJAXHandler(RequestHandler):
     @gen.coroutine
     def get(self):
-        try:
-            def grab_lock(self, callback=None):
+        def grab_lock(self, callback=None):
+            try:
                 lock.acquire_read()
                 self.write(stat_res)
-                callback()
-            yield gen.Task(grab_lock, self)
-        finally:
-            lock.release()
+            finally:
+                lock.release()
+            callback()
+        yield gen.Task(grab_lock, self)
 try:
     app = Application([url(r"/ajax", AJAXHandler),
                         url(r'/()', StaticFileHandler, {'path': "./index.html"}),
