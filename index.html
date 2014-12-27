@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Bootstrap -->
+<link href="assets/dist/css/bootstrap.min.css" rel="stylesheet" media="screen">
+<style> /* set the CSS */
+
+path { 
+    stroke: steelblue;
+    stroke-width: 2;
+    stroke-opacity: 1;
+    fill: none;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: grey;
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.job_graph {
+    /*
+    border: solid 2px;
+    border-color: rgba(231, 228, 157, 0.15);
+    background: none repeat scroll 0% 0% rgba(231, 228, 157, 0.25);
+    */
+    overflow: hidden;
+}
+
+.listgraph {
+    /*
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    */
+    margin-bottom: 0px;
+}
+
+.panel {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+</style>
+<script src="assets/js/d3.min.js"></script>
+<script src="assets/js/jquery-1.11.1.min.js"></script>
+<script src="assets/js/monitor.js"></script>
+<script src="assets/dist/js/bootstrap.min.js"></script>
+<body>
+<div id="jobs"></div>
+</body>
