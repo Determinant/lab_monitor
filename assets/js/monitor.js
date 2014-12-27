@@ -57,9 +57,9 @@ function random_range(min, max) {
 }
 
 function random_color() {
-    var r = (random_range(0, 200) + 100) / 2;
-    var g = (random_range(0, 200) + 100) / 2;
-    var b = (random_range(0, 200) + 100) / 2;
+    var r = (random_range(0, 200) + 150) / 2;
+    var g = (random_range(0, 200) + 150) / 2;
+    var b = (random_range(0, 200) + 150) / 2;
     return "#" + hex(r) + hex(g) + hex(b);
 }
 
