@@ -155,8 +155,8 @@ class AJAXHandler(RequestHandler):
         yield gen.Task(grab_lock, self)
 try:
     app = Application([url(r"/ajax", AJAXHandler),
-                        url(r'/()', StaticFileHandler, {'path': "./index.html"}),
-                        url(r'/(.*)', StaticFileHandler, {'path': "./"})])
+                        url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
+                        url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
     app.listen(PORT)
     IOLoop.current().start()
 except KeyboardInterrupt:

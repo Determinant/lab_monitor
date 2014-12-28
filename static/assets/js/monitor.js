@@ -63,8 +63,6 @@ function random_color() {
     return "#" + hex(r) + hex(g) + hex(b);
 }
 
-var freeze_var = function(cont, i, val) { return cont[i] = function(){ return val }; };
-
 function LineGraph() {}
 
 LineGraph.prototype.recalc_y_domain = function(mdata) {
@@ -101,7 +99,7 @@ LineGraph.prototype.parse_data = function(d) {
 LineGraph.prototype.update = function(d, i, b) {
     var graph = this;
     var mdata = this.parse_data(d);
-    var freezed_i = [];
+    if (mdata.length == 0) return;
     var recalced = false;
     var svg = d3.select(this.elem).select("svg");
     this.recalc_y_domain(mdata);
@@ -213,7 +211,7 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
     var mdata = this.parse_data(d);
 
     this.y = d3.scale.linear().range([this.height, 0]);
-    this.recalc_y_domain(mdata);
+    if (mdata.length) this.recalc_y_domain(mdata);
     this.yAxis = d3.svg.axis().scale(this.y)
                     .orient("left").ticks(5);
 
@@ -230,7 +228,7 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
     svg.attr("transform", "translate(" + (maxw + margin.left) + "," + margin.top + ")");
     this.inner_width = this.width - maxw;
     this.x = d3.scale.linear().range([0, this.inner_width]);
-    this.recalc_x_domain(mdata);
+    if (mdata.length) this.recalc_x_domain(mdata);
     this.xAxis = d3.svg.axis().scale(this.x)
                     .orient("bottom").ticks(5).tickFormat(d3.format("d"));
     // Define the line
