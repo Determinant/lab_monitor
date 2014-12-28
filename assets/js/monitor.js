@@ -73,11 +73,15 @@ LineGraph.prototype.recalc_y_domain = function(mdata) {
     var max = d3.max($.map(mdata, function (data) {
                 return d3.max(data, function(d) { return d.y; }); }));
     var delta = max - min;
-    this.y.domain([min - delta / 2.0, max + delta / 3.0]);
+    this.y.domain([min - Math.max(delta / 3.0, 1), max + Math.max(delta / 3.0, 1)]);
+}
+
+LineGraph.prototype.recalc_x_domain = function(mdata) {
+    this.x.domain(d3.extent(mdata[0], function(d) { return d.x; }));
 }
 
 LineGraph.prototype.recalc_domain = function(mdata) {
-    this.x.domain(d3.extent(mdata[0], function(d) { return d.x; }));
+    this.recalc_x_domain(mdata);
     this.recalc_y_domain(mdata);
 }
 
@@ -99,12 +103,35 @@ LineGraph.prototype.update = function(d, i, b) {
     var mdata = this.parse_data(d);
     var freezed_i = [];
     var recalced = false;
+    var svg = d3.select(this.elem).select("svg");
+    this.recalc_y_domain(mdata);
+    var ya = svg.select(".y.axis");
+    ya.transition()
+        .duration(750)
+        .call(this.yAxis);
+    var maxw = ya.node().getBBox().width;
+    svg.select("g")
+        .attr("transform", "translate(" + (maxw + this.margin.left) + "," + this.margin.top + ")");
+    var niw = this.width - maxw;
+    if (Math.abs(niw - this.inner_width) > 1e-6)
+    {
+        this.inner_width = niw;
+        this.x = d3.scale.linear().range([0, this.inner_width]);
+        this.xAxis = d3.svg.axis().scale(this.x)
+                        .orient("bottom").ticks(5).tickFormat(d3.format("d"));
+    }
+    this.recalc_x_domain(this.pdata);
+    svg.transition()
+       .duration(750)
+       .select(".x.axis")
+       .call(this.xAxis);
+    svg.select("rect")
+        .attr("width", this.inner_width);
     for (var i = 0; i < mdata.length; i++)
     {
         var data = mdata[i];
         if (data.length == 0) continue;
         var pdata = this.pdata[i];
-        var svg = d3.select(this.elem).select("svg");
         var path = this.line[i];
 
         var shift = pdata.length ? data[0].rid - pdata[0].rid : 0;
@@ -166,20 +193,13 @@ LineGraph.prototype.update = function(d, i, b) {
             }}(i, data)));
         }
     }
-    svg.transition()
-       .duration(750)
-       .select(".x.axis")
-       .call(this.xAxis);
-    svg.transition()
-       .duration(750)
-       .select(".y.axis")
-       .call(this.yAxis);
 }
 
 LineGraph.prototype.setup = function(elem, d, i, b) {
     var graph = this;
     this.elem = elem;
-    var margin = {top: 10, right: 0, bottom: 50, left: 30};
+    var margin = this.margin = {top: 10, right: 0, bottom: 50, left: 0};
+    var clippath_name = "clip" + d.jid;
     // Adds the svg canvas
     var svg = d3.select(this.elem)
                 .append("svg")
@@ -188,19 +208,31 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
                 .append("g")
                 .attr("transform",
                     "translate(" + margin.left + "," + margin.top + ")");
-    var width = 500 - margin.left - margin.right;
-    var height = 250 - margin.top - margin.bottom;
-    // Set the ranges
-    this.x = d3.scale.linear().range([0, width]);
-    this.y = d3.scale.linear().range([height, 0]);
+    this.width = 500 - margin.left - margin.right;
+    this.height = 250 - margin.top - margin.bottom;
     var mdata = this.parse_data(d);
-    this.recalc_domain(mdata);
-    // Define the axes
-    this.xAxis = d3.svg.axis().scale(this.x)
-                    .orient("bottom").ticks(5).tickFormat(d3.format("d"));
 
+    this.y = d3.scale.linear().range([this.height, 0]);
+    this.recalc_y_domain(mdata);
     this.yAxis = d3.svg.axis().scale(this.y)
                     .orient("left").ticks(5);
+
+    // Add the Y Axis
+    var ya = svg.append("g")
+        .attr("class", "y axis")
+        .call(this.yAxis);
+    /*
+    ya.selectAll("text").each(function() {
+        if(this.getBBox().width > maxw) maxw = this.getBBox().width;
+    });
+    */
+    var maxw = ya.node().getBBox().width;
+    svg.attr("transform", "translate(" + (maxw + margin.left) + "," + margin.top + ")");
+    this.inner_width = this.width - maxw;
+    this.x = d3.scale.linear().range([0, this.inner_width]);
+    this.recalc_x_domain(mdata);
+    this.xAxis = d3.svg.axis().scale(this.x)
+                    .orient("bottom").ticks(5).tickFormat(d3.format("d"));
     // Define the line
     this.valueline = d3.svg.line()
                         .x(function(d) { return this.x(d.x); })
@@ -208,36 +240,22 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
     // Add the X Axis
     svg.append("g")
         .attr("class", "x axis")
-        .attr("transform", "translate(0," + height + ")")
+        .attr("transform", "translate(0," + this.height + ")")
         .call(this.xAxis);
 
-    // Add the Y Axis
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(this.yAxis);
-
     svg.append("defs").append("clipPath")
-        .attr("id", "clip")
+        .attr("id", clippath_name)
         .append("rect")
-        .attr("width", width)
-        .attr("height", height);
+        .attr("width", this.inner_width)
+        .attr("height", this.height);
 
-    /*
-    svg.append("text")
-        .attr("x", (width / 2))
-        .attr("y", 0 - (margin.top / 2))
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .style("text-decoration", "none")
-        .text(d.name);
-    */
     this.pdata = [];
     this.line = [];
     fdata = [];
     fpath = [];
     d3.select(this.elem).transition()
         .duration(750)
-        .style("height", height + margin.top + margin.bottom + "px")
+        .style("height", this.height + this.margin.top + this.margin.bottom + "px")
         .each(b.setHook())
         .each("end", b.setNotifier(function() {
                     // Get the data
@@ -245,7 +263,7 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
             {
                 var data = mdata[i];
                 var path = svg.append("g")
-                                .attr("clip-path", "url(#clip)")
+                                .attr("clip-path", "url(#" + clippath_name + ")")
                                 .append("path");
 
                 path.attr("class", "line")
