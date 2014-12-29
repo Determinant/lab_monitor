@@ -264,8 +264,6 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
 
     this.pdata = [];
     this.line = [];
-    fdata = [];
-    fpath = [];
     d3.select(this.elem).transition()
         .duration(750)
         .style("height", this.height + this.margin.top + this.margin.bottom + "px")
