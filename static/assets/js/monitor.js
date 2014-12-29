@@ -74,12 +74,12 @@ LineGraph.prototype.recalc_y_domain = function(mdata) {
     this.y.domain([min - Math.max(delta / 3.0, 1), max + Math.max(delta / 3.0, 1)]);
 }
 
-LineGraph.prototype.recalc_x_domain = function(mdata) {
-    this.x.domain(d3.extent(mdata[0], function(d) { return d.x; }));
+LineGraph.prototype.recalc_x_domain = function(data) {
+    this.x.domain(d3.extent(data, function(d) { return d.x; }));
 }
 
 LineGraph.prototype.recalc_domain = function(mdata) {
-    this.recalc_x_domain(mdata);
+    this.recalc_x_domain(mdata[0]);
     this.recalc_y_domain(mdata);
 }
 
@@ -109,6 +109,7 @@ LineGraph.prototype.update = function(d, i, b) {
         .call(this.yAxis);
     var maxw = ya.node().getBBox().width;
     svg.select("g")
+        .transition().duration(750)
         .attr("transform", "translate(" + (maxw + this.margin.left) + "," + this.margin.top + ")");
     var niw = this.width - maxw;
     if (Math.abs(niw - this.inner_width) > 1e-6)
@@ -118,12 +119,12 @@ LineGraph.prototype.update = function(d, i, b) {
         this.xAxis = d3.svg.axis().scale(this.x)
                         .orient("bottom").ticks(5).tickFormat(d3.format("d"));
     }
-    this.recalc_x_domain(this.pdata);
-    svg.transition()
-       .duration(750)
+    this.recalc_x_domain(this.pdata[0]);
+    svg.transition().duration(750)
        .select(".x.axis")
        .call(this.xAxis);
     svg.select("rect")
+        .transition().duration(750)
         .attr("width", this.inner_width);
     for (var i = 0; i < mdata.length; i++)
     {
@@ -144,7 +145,14 @@ LineGraph.prototype.update = function(d, i, b) {
             }
             if (!recalced)
             {
-                this.recalc_domain(mdata);
+                this.recalc_x_domain(data);
+                svg.transition()
+                   .duration(750)
+                   .select(".x.axis")
+                   .call(this.xAxis);
+                svg.select("rect")
+                    .transition().duration(750)
+                    .attr("width", this.inner_width);
                 recalced = true;
             }
             path.transition()
@@ -164,31 +172,38 @@ LineGraph.prototype.update = function(d, i, b) {
         }
         else
         {
-            if (!recalced)
-            {
-                this.recalc_domain(this.pdata);
-                recalced = true;
-            }
             //console.log("shift: " + shift + "add: " + add);
             data = pdata.concat(data.slice(data.length - add, data.length));
             for (var j = 0; j < data.length; j++)
                 data[j].x = j;
-            this.recalc_y_domain(mdata);
-            path.transition().duration(750)
-            .attr("d", graph.valueline(data))
-            .transition()
-            .duration(750)
-            .attr("transform", "translate(" + this.x(-shift) + ")")
-            .each(b.setHook())
-            .each("end", b.setNotifier(function(i, data) { return function() {
-                for (var j = 0; j < shift; j++)
-                    data.shift();
-                for (var j = 0; j < data.length; j++)
-                    data[j].x = j;
-                graph.pdata[i] = data;
-                d3.select(this).attr("d", graph.valueline(data))
-                                .attr("transform", "translate(" + graph.x(0) + ")");
-            }}(i, data)));
+            if (shift > 0)
+                path.transition().duration(750)
+                .attr("d", graph.valueline(data))
+                .transition()
+                .duration(750)
+                .attr("transform", "translate(" + this.x(-shift) + ")")
+                .each(b.setHook())
+                .each("end", b.setNotifier(function(i, data) { return function() {
+                    for (var j = 0; j < shift; j++)
+                        data.shift();
+                    for (var j = 0; j < data.length; j++)
+                        data[j].x = j;
+                    graph.pdata[i] = data;
+                    d3.select(this).attr("d", graph.valueline(data))
+                                    .attr("transform", "translate(" + graph.x(0) + ")");
+                }}(i, data)))
+            else
+            {
+                //console.log(data);
+                this.pdata[i] = data;
+                /* Note: the added data is delayed from showing for the sake of
+                 * more decent transition animation */
+                path.transition().duration(750)
+                .attr("d", graph.valueline(data))
+                .transition()
+                .each(b.setHook())
+                .each("end", b.setNotifier(function(){}));
+            }
         }
     }
 }
@@ -228,7 +243,7 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
     svg.attr("transform", "translate(" + (maxw + margin.left) + "," + margin.top + ")");
     this.inner_width = this.width - maxw;
     this.x = d3.scale.linear().range([0, this.inner_width]);
-    if (mdata.length) this.recalc_x_domain(mdata);
+    if (mdata.length) this.recalc_x_domain(mdata[0]);
     this.xAxis = d3.svg.axis().scale(this.x)
                     .orient("bottom").ticks(5).tickFormat(d3.format("d"));
     // Define the line
