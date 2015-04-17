@@ -8,6 +8,7 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, url, StaticFileHandler
 from rwlock import RWLock
+from ConfigParser import SafeConfigParser
 
 class ActionError(Exception):
     pass
@@ -129,12 +130,14 @@ class AJAXHandler(RequestHandler):
         yield gen.Task(grab_lock, self)
 
 if __name__ == '__main__':
+    config = SafeConfigParser()
+    config.read('server_settings.cfg')
     logging.basicConfig(level=logging.DEBUG,
                 format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
     MAX_LENGTH = 65536
     MAX_RECORDS = 32
-    PORT = 2333
-    SOCKET_PORT = 2334
+    HTTP_PORT = config.get('HTTP', 'port') or 2333
+    SOCKET_PORT = config.get('socket', 'port') or 2334
     HOST = ''
 
     lock = RWLock()
@@ -151,11 +154,13 @@ if __name__ == '__main__':
     cmd = threading.Thread(target=command_server, name="local")
     cmd.setDaemon(True)
     cmd.start()
+
     try:
         app = Application([url(r"/ajax", AJAXHandler),
                             url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
                             url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
-        app.listen(PORT)
+        app.listen(HTTP_PORT)
         IOLoop.current().start()
     except KeyboardInterrupt:
         cmd_shutdown()
+
