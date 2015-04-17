@@ -110,10 +110,10 @@ def command_server():
             conn.close()
 
 def cmd_shutdown():
-    global is_exiting, cmd_socket, local_socket_address, cmd
+    global is_exiting, cmd_socket, cmd
     is_exiting.set();
     cmd_socket.close()
-    socket(AF_INET).connect(local_socket_address)
+    socket.socket(AF_INET, SOCK_STREAM).connect((HOST, SOCKET_PORT))
     cmd.join()
 
 class AJAXHandler(RequestHandler):
