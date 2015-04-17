@@ -3,5 +3,5 @@
 .*.swp
 .*.swo
 *.socket
+client_settings.sh
 venv/
-
