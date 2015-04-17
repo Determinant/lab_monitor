@@ -9,20 +9,6 @@ from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, url, StaticFileHandler
 from rwlock import RWLock
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
-MAX_LENGTH = 65536
-MAX_RECORDS = 32
-PORT = 2333
-SOCKET_PORT = 2334
-HOST = ''
-
-lock = RWLock()
-stat_res = {}
-is_exiting = threading.Event()
-reclaimed_ids = []
-id_cnt = 0
-
 class ActionError(Exception):
     pass
 
@@ -82,12 +68,6 @@ def clear_records(mesg):
     stat_res[mid]["records"] = []
     return ""
 
-action_map = {"create": add_monitor,
-                "drop": del_monitor,
-                "add": add_record,
-                "clear": clear_records,
-                "alter": alter_records}
-
 def command_server():
     global c, cmd_socket, is_exiting
     cmd_socket = socket.socket(AF_INET, SOCK_STREAM)
@@ -129,10 +109,6 @@ def command_server():
         finally:
             conn.close()
 
-cmd = threading.Thread(target=command_server, name="local")
-cmd.setDaemon(True)
-cmd.start()
-
 def cmd_shutdown():
     global is_exiting, cmd_socket, local_socket_address, cmd
     is_exiting.set();
@@ -151,11 +127,35 @@ class AJAXHandler(RequestHandler):
                 lock.release()
             callback()
         yield gen.Task(grab_lock, self)
-try:
-    app = Application([url(r"/ajax", AJAXHandler),
-                        url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
-                        url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
-    app.listen(PORT)
-    IOLoop.current().start()
-except KeyboardInterrupt:
-    cmd_shutdown()
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG,
+                format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
+    MAX_LENGTH = 65536
+    MAX_RECORDS = 32
+    PORT = 2333
+    SOCKET_PORT = 2334
+    HOST = ''
+
+    lock = RWLock()
+    stat_res = {}
+    is_exiting = threading.Event()
+    reclaimed_ids = []
+    id_cnt = 0
+    action_map = {"create": add_monitor,
+                    "drop": del_monitor,
+                    "add": add_record,
+                    "clear": clear_records,
+                    "alter": alter_records}
+
+    cmd = threading.Thread(target=command_server, name="local")
+    cmd.setDaemon(True)
+    cmd.start()
+    try:
+        app = Application([url(r"/ajax", AJAXHandler),
+                            url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
+                            url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
+        app.listen(PORT)
+        IOLoop.current().start()
+    except KeyboardInterrupt:
+        cmd_shutdown()
