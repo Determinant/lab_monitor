@@ -137,7 +137,7 @@ def cmd_shutdown():
     global is_exiting, cmd_socket, local_socket_address, cmd
     is_exiting.set();
     cmd_socket.close()
-    socket(AF_UNIX).connect(local_socket_address)
+    socket(AF_INET).connect(local_socket_address)
     cmd.join()
 
 class AJAXHandler(RequestHandler):
