@@ -1,6 +1,7 @@
 import time, json, os, re
 import logging, threading
-from socket import socket, AF_UNIX, SHUT_WR, error as SocketError
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_WR, error as SocketError
+import socket
 from struct import pack, unpack
 from time import sleep
 from tornado import gen
@@ -13,7 +14,8 @@ logging.basicConfig(level=logging.DEBUG,
 MAX_LENGTH = 65536
 MAX_RECORDS = 32
 PORT = 2333
-local_socket_address = "./lab_monitor.socket"
+SOCKET_PORT = 2334
+HOST = ''
 
 lock = RWLock()
 stat_res = {}
@@ -88,13 +90,8 @@ action_map = {"create": add_monitor,
 
 def command_server():
     global c, cmd_socket, is_exiting
-    try:
-        os.unlink(local_socket_address)
-    except OSError:
-        if os.path.exists(local_socket_address):
-            raise
-    cmd_socket = socket(AF_UNIX)
-    cmd_socket.bind(local_socket_address)
+    cmd_socket = socket.socket(AF_INET, SOCK_STREAM)
+    cmd_socket.bind((HOST, SOCKET_PORT))
     cmd_socket.listen(5)
     while not is_exiting.isSet():
         logging.debug("accepting")
@@ -142,6 +139,7 @@ def cmd_shutdown():
     cmd_socket.close()
     socket(AF_UNIX).connect(local_socket_address)
     cmd.join()
+
 class AJAXHandler(RequestHandler):
     @gen.coroutine
     def get(self):
