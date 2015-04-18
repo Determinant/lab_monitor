@@ -3,3 +3,6 @@
 .*.swp
 .*.swo
 *.socket
+client_settings.sh
+server_settings.cfg
+venv/

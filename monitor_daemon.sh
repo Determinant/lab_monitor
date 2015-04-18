@@ -4,7 +4,12 @@
 #    echo "you must specify the triggered command"
 #    exit 1
 #fi
-CLIENT="python lab_monitor_client.py"
+if [[ -e client_settings.sh ]]; then
+    source client_settings.sh
+    SOCKET_SPEC="--host $SOCKET_HOST --port $SOCKET_PORT"
+fi
+echo "Reporting to $SOCKET_SPEC"
+CLIENT="python lab_monitor_client.py $SOCKET_SPEC"
 function on_exit {
     $CLIENT --drop "$JID"
     exit 0

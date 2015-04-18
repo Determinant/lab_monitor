@@ -1,25 +1,14 @@
 import time, json, os, re
 import logging, threading
-from socket import socket, AF_UNIX, SHUT_WR, error as SocketError
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_WR, error as SocketError
+import socket
 from struct import pack, unpack
 from time import sleep
 from tornado import gen
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application, url, StaticFileHandler
 from rwlock import RWLock
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
-MAX_LENGTH = 65536
-MAX_RECORDS = 32
-PORT = 2333
-local_socket_address = "./lab_monitor.socket"
-
-lock = RWLock()
-stat_res = {}
-is_exiting = threading.Event()
-reclaimed_ids = []
-id_cnt = 0
+from ConfigParser import SafeConfigParser
 
 class ActionError(Exception):
     pass
@@ -80,21 +69,10 @@ def clear_records(mesg):
     stat_res[mid]["records"] = []
     return ""
 
-action_map = {"create": add_monitor,
-                "drop": del_monitor,
-                "add": add_record,
-                "clear": clear_records,
-                "alter": alter_records}
-
 def command_server():
     global c, cmd_socket, is_exiting
-    try:
-        os.unlink(local_socket_address)
-    except OSError:
-        if os.path.exists(local_socket_address):
-            raise
-    cmd_socket = socket(AF_UNIX)
-    cmd_socket.bind(local_socket_address)
+    cmd_socket = socket.socket(AF_INET, SOCK_STREAM)
+    cmd_socket.bind((HOST, SOCKET_PORT))
     cmd_socket.listen(5)
     while not is_exiting.isSet():
         logging.debug("accepting")
@@ -132,16 +110,13 @@ def command_server():
         finally:
             conn.close()
 
-cmd = threading.Thread(target=command_server, name="local")
-cmd.setDaemon(True)
-cmd.start()
-
 def cmd_shutdown():
-    global is_exiting, cmd_socket, local_socket_address, cmd
+    global is_exiting, cmd_socket, cmd
     is_exiting.set();
     cmd_socket.close()
-    socket(AF_UNIX).connect(local_socket_address)
+    socket.socket(AF_INET, SOCK_STREAM).connect((HOST, SOCKET_PORT))
     cmd.join()
+
 class AJAXHandler(RequestHandler):
     @gen.coroutine
     def get(self):
@@ -153,11 +128,39 @@ class AJAXHandler(RequestHandler):
                 lock.release()
             callback()
         yield gen.Task(grab_lock, self)
-try:
-    app = Application([url(r"/ajax", AJAXHandler),
-                        url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
-                        url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
-    app.listen(PORT)
-    IOLoop.current().start()
-except KeyboardInterrupt:
-    cmd_shutdown()
+
+if __name__ == '__main__':
+    config = SafeConfigParser()
+    config.read('server_settings.cfg')
+    logging.basicConfig(level=logging.DEBUG,
+                format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
+    MAX_LENGTH = 65536
+    MAX_RECORDS = 32
+    HTTP_PORT = config.get('HTTP', 'port') or 2333
+    SOCKET_PORT = config.get('socket', 'port') or 2334
+    HOST = ''
+
+    lock = RWLock()
+    stat_res = {}
+    is_exiting = threading.Event()
+    reclaimed_ids = []
+    id_cnt = 0
+    action_map = {"create": add_monitor,
+                    "drop": del_monitor,
+                    "add": add_record,
+                    "clear": clear_records,
+                    "alter": alter_records}
+
+    cmd = threading.Thread(target=command_server, name="local")
+    cmd.setDaemon(True)
+    cmd.start()
+
+    try:
+        app = Application([url(r"/ajax", AJAXHandler),
+                            url(r'/()', StaticFileHandler, {'path': "./static/index.html"}),
+                            url(r'/(.*)', StaticFileHandler, {'path': "./static/"})])
+        app.listen(HTTP_PORT)
+        IOLoop.current().start()
+    except KeyboardInterrupt:
+        cmd_shutdown()
+

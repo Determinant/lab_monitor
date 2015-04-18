@@ -1,4 +1,4 @@
-from socket import socket, AF_UNIX
+from socket import socket, AF_INET, SOCK_STREAM
 from struct import pack, unpack
 from sys import stdout, stdin
 import argparse
@@ -10,6 +10,8 @@ parser.add_argument('--clear')
 parser.add_argument('--drop')
 parser.add_argument('--alter')
 parser.add_argument('--type')
+parser.add_argument('--host', default='127.0.0.1')
+parser.add_argument('--port', default='2334', type=int)
 parser.add_argument('col', nargs='*')
 args = parser.parse_args()
 
@@ -42,8 +44,8 @@ if __name__ == '__main__':
         print('please specify an action')
         exit(1)
 
-    s = socket(AF_UNIX)
-    s.connect("./lab_monitor.socket")
+    s = socket(AF_INET, SOCK_STREAM)
+    s.connect((args.host, args.port))
     mesg = json.dumps(cmd)
     mesg = pack("<i", len(mesg)) + mesg
     s.send(mesg)
