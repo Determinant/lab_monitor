@@ -1,4 +1,5 @@
 path {
+    pointer-events: none;
     stroke-width: 2;
     fill: none;
 }
@@ -22,4 +23,19 @@ path {
 .panel {
     margin-left: auto;
     margin-right: auto;
+}
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+}
+
+.focus circle {
+    pointer-events: none;
+    fill: none;
+    stroke: steelblue;
+}
+
+.focus text {
+    pointer-events: none;
 }

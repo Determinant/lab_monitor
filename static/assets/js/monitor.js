@@ -262,8 +262,39 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
         .attr("width", this.inner_width)
         .attr("height", this.height);
 
+    svg.append("rect")
+        .attr("class", "overlay")
+        .attr("width", this.inner_width)
+        .attr("height", this.height)
+        .on("mouseover", function() {
+                //console.log("over");
+                for (var i = 0; i < graph.pdata.length; i++)
+                    graph.focus[i].style("display", null)
+                               // .transition().duration(300)
+                                .style("stroke-opacity", 1); })
+        .on("mouseout", function() {
+                //console.log("out");
+                for (var i = 0; i < graph.pdata.length; i++)
+                    graph.focus[i]
+                            //.transition().duration(300)
+                            .style("stroke-opacity", 1e-6)
+                            .transition()
+                            .style("display", "none"); })
+        .on("mousemove", mousemove);
+    function mousemove() {
+        var x0 = graph.x.invert(d3.mouse(this)[0]);
+        for (var i = 0; i < graph.pdata.length; i++)
+        {
+            var d = graph.pdata[i][Math.round(x0)];
+            var f = graph.focus[i];
+            f.transition().duration(100).attr("transform", "translate(" + graph.x(d.x) + "," + graph.y(d.y) + ")");
+            f.select("text").text(d.y);
+        }
+    }
+
     this.pdata = [];
     this.line = [];
+    this.focus = [];
     d3.select(this.elem).transition()
         .duration(750)
         .style("height", this.height + this.margin.top + this.margin.bottom + "px")
@@ -292,6 +323,19 @@ LineGraph.prototype.setup = function(elem, d, i, b) {
                         path.attr("stroke-dasharray", "");
                         graph.line.push(path);
                     }}(data, path)));
+
+            }
+            for (var i = 0; i < mdata.length; i++)
+            {
+                var f = svg.append("g")
+                            .attr("class", "focus")
+                            .style("display", "none");
+                f.append("circle")
+                 .attr("r", 4.5);
+                f.append("text")
+                 .attr("x", 9)
+                 .attr("dy", ".35em");
+                graph.focus.push(f);
             }
             graph.pdata = mdata;
         }));
