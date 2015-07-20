@@ -136,8 +136,8 @@ if __name__ == '__main__':
                 format='[%(levelname)-7s] (%(threadName)-10s) %(message)s',)
     MAX_LENGTH = 65536
     MAX_RECORDS = 32
-    HTTP_PORT = config.get('HTTP', 'port') or 2333
-    SOCKET_PORT = config.get('socket', 'port') or 2334
+    HTTP_PORT = config.getint('HTTP', 'port') or 2333
+    SOCKET_PORT = config.getint('socket', 'port') or 2334
     HOST = ''
 
     lock = RWLock()
