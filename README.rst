@@ -2,4 +2,4 @@ Lab Monitor
 ===========
 
 - Still under development
-- For demo, please visit: http://hydrogen.tedyin.com:8080/
+- For demo, please visit: https://tedyin.com/demo-lab-monitor/
